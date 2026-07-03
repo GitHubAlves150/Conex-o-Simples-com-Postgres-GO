@@ -1,13 +1,14 @@
 package handdler
 
 import (
+	"app/internal/interface_test"
 	"app/internal/service"
 	"encoding/json"
 	"net/http"
 )
 
 func CriaUsuarioHanddler(w http.ResponseWriter, r *http.Request) {
-	var Req estrutura.UserResponse
+	var Req interface_test.UserResponse
 
 	err := json.NewDecoder(r.Body).Decode(&Req)
 
@@ -16,7 +17,7 @@ func CriaUsuarioHanddler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := service.CriarUsuarioService(Req.Nome, Req.Senha, Req.Email)
+	user, err := service.CriarUsuarioService(Req.Name, Req.Senha, Req.Email)
 	if err != nil {
 		http.Error(w, "Erro: "+err.Error(), http.StatusBadRequest)
 		return
