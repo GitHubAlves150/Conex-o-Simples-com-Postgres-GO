@@ -1,7 +1,8 @@
 package main
 
 import (
-	"app/internal/handdler"
+	"api_teste/internal/handdlers"
+	"api_teste/internal/repository"
 	"fmt"
 	"net/http"
 
@@ -10,11 +11,18 @@ import (
 
 func main() {
 
-	router := chi.NewRouter()
+	db := repository.ConectDB()
+	userHandler := handdlers.NewUseHanddler(db)
 
-	router.Post("/usuary", handdler.CriaUsuarioHanddler)
+	//configura o roteador chi
+	r := chi.NewRouter()
 
-	fmt.Println("Servidor iniciado em http://localhost:8080...")
-	http.ListenAndServe(":8080", router) // Liga o servidor à porta 8080 usando as rotas do Chi
+	//registra a rota. Passamos o método da struct que criamos acima
+	r.Get("/users", userHandler.ObterUsuarios)
+	
+	//Inicia o servidor
+	fmt.Println("Servidor rodando na porta :8080 em hhtp//localhost")
+	http.ListenAndServe(":8080", r)
 
 }
+
