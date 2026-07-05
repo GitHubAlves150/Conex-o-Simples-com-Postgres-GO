@@ -7,19 +7,26 @@ import (
 	"net/http"
 )
 
-func CriaUsuarioHanddler(w http.ResponseWriter, r *http.Request) {
-	var Req interface_test.UserResponse
+type UsuarioHandler struct {
+	srv service.UsuarioService
+}
+
+func NewUsuarioHandler(srv service.UsuarioService) *UsuarioHandler {
+	return &UsuarioHandler{srv: srv}
+}
+
+func (h *UsuarioHandler) CriaUsuarioHanddler(w http.ResponseWriter, r *http.Request) {
+	var Req interface_test.UserRequest
 
 	err := json.NewDecoder(r.Body).Decode(&Req)
-
 	if err != nil {
-		http.Error(w, "Erro: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Erro no payload: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	user, err := service.CriarUsuarioService(Req.Name, Req.Senha, Req.Email)
+	user, err := h.srv.CriarUsuario(Req.Name, Req.Email, Req.Senha)
 	if err != nil {
-		http.Error(w, "Erro: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Erro no service: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 

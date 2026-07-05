@@ -357,6 +357,18 @@ CREATE TABLE public.users (
     criado timestamp with time zone DEFAULT now(),
     CONSTRAINT users_pkey PRIMARY KEY (id)
 );
+
+OU
+
+CREATE TABLE users (
+    id varchar(36) NOT NULL,
+    nome varchar(50) NOT NULL,
+    email varchar(100) NOT NULL,
+    senha varchar(100) NOT NULL,
+    criado timestamp with time zone DEFAULT now(),
+    CONSTRAINT users_pkey PRIMARY KEY (id)
+);
+
 ```
 
 > **Nota:** Use o código com cuidado ao executar em ambientes de produção.
