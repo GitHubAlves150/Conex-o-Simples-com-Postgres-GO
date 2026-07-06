@@ -1,59 +1,50 @@
-# 🚀 API Go com PostgreSQL & Docker
+# Guia Completo de Desenvolvimento Web: Do Backend (Go + GORM) ao Frontend (TypeScript + HTML/CSS)
 
-Uma API REST simples e estruturada desenvolvida em Go (Golang) para fins de estudo. O projeto demonstra a criação de uma arquitetura em camadas (Handler, Service, Repository) conectada a uma base de dados PostgreSQL isolada num contentor Docker.
+Este guia prático foi estruturado para consolidar o aprendizado do sistema web desenvolvido, cobrindo desde a configuração do banco de dados e a arquitetura em camadas no backend até a integração com uma interface visual moderna em TypeScript.
 
-## 🛠️ Tecnologias Utilizadas
+---
 
-* **Go (Golang)** (v1.23+)
-* **PostgreSQL** (v15)
-* **Docker & Docker Compose** (Para orquestração do banco de dados)
-* **Go-Chi** (Router HTTP leve)
-* **Google UUID** (Para geração de IDs únicos)
-* **Lib/PQ** (Driver nativo do Postgres para Go)
+## 🛠️ Capítulo 1: Pré-requisitos e Instalação do Ambiente
 
-## 📁 Estrutura do Projeto
+Antes de iniciar o desenvolvimento, é necessário garantir que todas as ferramentas básicas estejam instaladas no sistema operacional (foco em distribuições baseadas em Linux/Ubuntu).
 
-```text
-APITeste/
-├── cmd/
-│   └── api/
-│       └── main.go           # Ponto de entrada da aplicação
-├── internal/
-│   ├── estrutura/
-│   │   └── user.go           # Structs de Request e Response (Modelos)
-│   ├── handdlerUser/
-│   │   └── user_handler.go   # Camada de controle HTTP (JSON/Status Code)
-│   ├── repository/
-│   │   ├── conectDB.go       # Inicialização e Ping do banco de dados
-│   │   └── salvarUser_DB.go  # Queries SQL (Inserts/Exec)
-│   └── servico/
-│       └── criar_user.go     # Regras de negócio e geração de UUID
-├── docker-compose.yml        # Configuração do container do Postgres
-└── go.mod                    # Gestão de dependências do Go
+### 1. Backend: Instalação do Go
+
+Certifique-se de ter a versão estável do Go instalada (recomendado Go 1.23 ou superior).
+
+```bash
+# Atualize os repositórios locais
+sudo apt update
+
+# Instale o Go
+sudo apt install golang-go
+
+# Verifique se a instalação foi bem-sucedida
+go version
 ```
 
-## 🚀 Como Executar o Projeto
+### 2. Banco de Dados: PostgreSQL
 
-### 1. Clonar o repositório
-```bash
-git clone https://github.com
-cd NOME_DO_REPOSITORIO
-```
+O banco de dados è instalado dentro do docker.
+È preciso instalar o docker engine(não o docker desktop). Após isso, veja que tem um arquivo 
+chamado docker-compose.yml que orquestra a instalaçção do container e a construção do banco de dados.
+Para entrar dentro do banco de dados, deve-se entrar no docker e entrar no post em seguida. Siga os comandos abaixo.
 
-### 2. Iniciar o Banco de Dados (Docker)
-Certifique-se de que tem o Docker instalado e execute:
 ```bash
+# Rodar o docker-compose.yml
 docker compose up -d
-```
 
-### 3. Configurar a Tabela no Postgres
-Entre no terminal do Postgres dentro do container:
-```bash
-docker exec -it postgres_teste psql -U usuario_lucas -d banco_teste_lucas
-```
-Cole o seguinte script SQL para criar a tabela:
-```sql
-CREATE TABLE users (
+# Em seguida verificar se o container "postgres_teste" está rodando
+docker ps OU docker ps -a para ver todos os containers
+
+# Entrar no banco de dados, verificar o nome do bando e do usuario no arquivo docker-compose.yml
+psql -U usuaria-lucas -d banco_teste_lucas
+
+# Verificar todoas as tabelas que estão no banco
+\dt # nenhum foi criada
+
+# Criar a tabela users
+ CREATE TABLE users (
     id VARCHAR(36) PRIMARY KEY,
     nome VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL,
@@ -62,366 +53,522 @@ CREATE TABLE users (
     data_nascimento DATE,
     criado TIMESTAMPTZ DEFAULT NOW()
 );
-```
-Digite `\q` para sair do terminal do Postgres.
 
-### 4. Iniciar a API em Go
-Na raiz do projeto, instale as dependências e rode o servidor:
+# verificar os dados da tabela, se tiver vai aparecer senão não irá apraecer nada
+SELECT * FROM users;
+
+# Você pode testar o banco com 
+curl -X POST http://localhost:8080/usuary   -H "Content-Type: application/json"   -d '{"name": "Alicia", "email": "Rubens@email.com", "senha": "mkjkljlk"}'
+
+
+```
+
+### 3. Frontend: NodeJS e NPM
+
+O NodeJS é necessário para gerenciar os pacotes do frontend e executar o compilador do TypeScript.
+
 ```bash
-go mod tidy
-go run cmd/api/main.go
+# Instalação do NodeJS e do gerenciador de pacotes NPM
+sudo apt install nodejs npm
+
+# Verifique as versões instaladas
+node -v
+npm -v
 ```
-O servidor será iniciado em: `http://localhost:8080`
 
-## 🧪 Como Testar (Endpoints)
+---
 
-### Criar Perfil de Utilizador
-* **Rota:** `/Perfil`
-* **Método:** `POST`
-* **Headers:** `Content-Type: application/json`
+## 📂 Capítulo 2: Estrutura de Pastas do Projeto
 
-**Exemplo de Requisição (cURL):**
+O projeto adota o padrão de mercado baseado em Clean Architecture e separação estrita de responsabilidades em um repositório unificado (Monorepo).
 ```bash
-curl -X POST http://localhost:8080/Perfil \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nome": "Lucas", 
-    "email": "lucas@email.com", 
-    "senha": "123", 
-    "medicamento": "Albatroz de cavilatacio", 
-    "data_nascimento": "1988-08-31"
-  }'
+
+My_project/
+├── go.mod # Gerenciador de dependências do Go
+├── go.sum # Checagem de integridade dos pacotes Go
+├── main.go # Ponto de entrada da aplicação backend
+├── internal/ # Código privado do Go (não importável externamente)
+│ ├── interface_test/
+│ │ └── estrutura.go # Entidades do banco e DTOs da API
+│ ├── handdler/
+│ │ └── handler.go # Camada HTTP / Controladores
+│ ├── service/
+│ │ └── service.go # Regras de negócio e validações
+│ └── repository/
+│ ├── database.go # Configuração do Pool de Conexões GORM
+│ └── repository.go # Operações de persistência (INSERT)
+└── frontend/ # Pasta exclusiva do Frontend
+├── index.html # Estrutura visual da página
+├── style.css # Estilização da interface
+├── app.ts # Lógica do cliente em TypeScript
+├── app.js # Arquivo compilado final (gerado automaticamente)
+└── package.json # Dependências de desenvolvimento do frontend
+
+
 ```
 
----
-# 📖 Documentação do Projeto: Primeira Etapa - Inserção de Dados (POST)
-
-Este documento detalha o funcionamento da primeira etapa da API em Go, focada na criação e inserção de dados (método POST) no PostgreSQL utilizando o **Chi**, o driver nativo `database/sql` e o **UUID**.
 
 ---
 
-## 🏎️ A Analogia do Carro e do Motor (Versão Fábrica)
+## 🖥️ Capítulo 3: O Desenvolvimento do Backend (Golang)
 
-Para entender como os dados entram no sistema através do método POST, adaptamos a nossa analogia para uma linha de montagem:
-* **`CriaUsuarioHanddler` (A Portaria da Fábrica):** Recebe a matéria-prima (os dados em formato JSON que o cliente enviou), confere se o formato está correto e autoriza a entrada.
-* **`CriarUsuarioService` (A Linha de Produção / Regras):** É o cérebro que decide o que fazer. Ele valida se o nome está preenchido, gera o número de série único (o ID do usuário usando UUID) e monta o objeto final.
-* **`SalvarAT_DB` (A Prensa / Armazenamento):** É a máquina que pega no objeto montado e grava-o de forma permanente dentro do depósito (o banco de dados PostgreSQL).
-* **`OpenDB` (O Gerador de Energia):** Abre e fecha a conexão com a energia (o banco de dados) toda vez que uma peça precisa de ser gravada.
+### 1. Inicializando o Módulo Go e Baixando Dependências
 
----
+Na raiz do projeto (`lambda_project/`), execute os comandos para criar o escopo do projeto e obter os pacotes necessários:
 
-## 📦 Explicação Arquivo por Arquivo
+```bash
+go mod init app
+go get github.com/go-chi/chi/v5
+go get github.com/go-chi/cors
+go get github.com/google/uuid
+go get gorm.io/driver/postgres
+go get gorm.io/gorm
+```
 
-### 1. `main.go` (A Oficina / O Maestro)
-Inicia o roteador e abre as portas da aplicação para ouvir requisições na rede.
+### 2. Camada de Modelos e DTOs (`internal/interface_test/estrutura.go`)
+
+Diferenciação clara entre o modelo relacional do banco de dados e os objetos de transferência de dados (DTOs) públicos.
 
 ```go
-package main
+package interface_test
 
-import (
-	"app/internal/handdler"
-	"fmt"
-	"net/http"
+import "time"
 
-	"github.com/go-chi/chi/v5"
-)
+// User representa o modelo físico no banco de dados gerenciado pelo GORM
+type User struct {
+    ID       string    `gorm:"primaryKey;type:uuid"`
+    Name     string    `gorm:"column:nome;type:varchar(100);not null"`
+    Email    string    `gorm:"uniqueIndex;type:varchar(100);not null"`
+    Senha    string    `gorm:"type:varchar(255);not null"`
+    CriadoEm time.Time `gorm:"column:criado;default:CURRENT_TIMESTAMP"`
+}
 
-func main() {
-	// 1. Configura as estradas digitais da aplicação usando o Chi
-	router := chi.NewRouter()
+// UserRequest mapeia o JSON de entrada enviado pelo formulário
+type UserRequest struct {
+    Name  string `json:"name"`
+    Email string `json:"email"`
+    Senha string `json:"senha"`
+}
 
-	// 2. Define que quando chegar um pedido POST em "/usuary", o guardião do handler entra em ação
-	router.Post("/usuary", handdler.CriaUsuarioHanddler)
-
-	// 3. Liga o servidor HTTP na porta 8080
-	fmt.Println("Servidor iniciado em http://localhost:8080...")
-	http.ListenAndServe(":8080", router) 
+// UserResponse mascara dados sensíveis (exclui a senha) na resposta HTTP
+type UserResponse struct {
+    ID        string    `json:"id"`
+    Name      string    `json:"name"`
+    Email     string    `json:"email"`
+    Senha     string    `json:"senha"`
+    Criado_em time.Time `json:"criado_em"`
 }
 ```
 
----
+### 3. Gerenciamento do Banco e Pool de Conexões (`internal/repository/database.go`)
 
-### 2. `internal/handdler/user_handler.go` (A Portaria / Validador HTTP)
-Este arquivo recebe o pedido da web, lê o JSON que veio no corpo da requisição (`r.Body`) e repassa os dados limpos para a camada de negócios (Service).
+Configuração que mitiga gargalos de desempenho limitando conexões simultâneas e reciclando recursos inativos no PostgreSQL.
 
 ```go
-package handdler
+package repository
 
 import (
-	"app/internal/service"
-	"encoding/json"
-	"net/http"
+    "fmt"
+    "time"
+
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
 )
 
-func CriaUsuarioHanddler(w http.ResponseWriter, r *http.Request) {
-	var Req estrutura.UserResponse // Cria o molde vazio para receber os dados
+func OpenDBWithGORM() (*gorm.DB, error) {
+    dsn := "host=localhost port=5432 user=usuario_lucas password=123456 dbname=banco_teste_lucas sslmode=disable"
 
-	// Converte o JSON que o cliente enviou em uma struct que o Go entende
-	err := json.NewDecoder(r.Body).Decode(&Req)
-	if err != nil {
-		http.Error(w, "Erro: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+    if err != nil {
+        return nil, fmt.Errorf("erro ao abrir conexão com GORM: %v", err)
+    }
 
-	// Envia os dados extraídos para o Service validar e processar
-	user, err := service.CriarUsuarioService(Req.Nome, Req.Senha, Req.Email)
-	if err != nil {
-		http.Error(w, "Erro: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+    sqlDB, err := db.DB()
+    if err != nil {
+        return nil, err
+    }
 
-	// Devolve os dados do usuário recém-criado em formato JSON com o código 201 Created
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
+    // Configuração obrigatória do Pool de Conexões para Produção
+    sqlDB.SetMaxOpenConns(25)                  // Limite de conexões ativas simultâneas
+    sqlDB.SetMaxIdleConns(25)                  // Mantém conexões prontas em standby
+    sqlDB.SetConnMaxLifetime(5 * time.Minute)  // Tempo limite de vida de cada conexão
+
+    return db, nil
 }
 ```
 
----
+### 4. Camada de Persistência (`internal/repository/repository.go`)
 
-### 3. `internal/service/user_service.go` (A Linha de Produção / Regras de Negócio)
-Este componente aplica as regras do sistema (como não aceitar nomes vazios) e gera identificadores únicos (UUID) antes de salvar o registro.
+Abstração responsável unicamente por interagir com o mecanismo do GORM.
+
+```go
+package repository
+
+import (
+    "app/internal/interface_test"
+    "gorm.io/gorm"
+)
+
+type UsuarioRepository interface {
+    SalvarNoBanco(user *interface_test.User) error
+}
+
+type GormRepository struct {
+    db *gorm.DB
+}
+
+func NewGormRepository(db *gorm.DB) *GormRepository {
+    return &GormRepository{db: db}
+}
+
+func (r *GormRepository) SalvarNoBanco(user *interface_test.User) error {
+    result := r.db.Create(user) // GORM gera o INSERT INTO de forma nativa e segura
+    return result.Error
+}
+```
+
+### 5. Camada de Regras de Negócio (`internal/service/service.go`)
+
+Coração do sistema onde os dados são processados, validados e enriquecidos antes de persistirem.
 
 ```go
 package service
 
 import (
-	"app/internal/repository"
-	"errors"
-	"fmt"
-	"time"
+    "app/internal/interface_test"
+    "app/internal/repository"
+    "errors"
+    "time"
 
-	"github.com/google/uuid"
+    "github.com/google/uuid"
 )
 
-func CriarUsuarioService(nome, email, senha string) (*UserResponse, error) {
-	// Regra de Negócio: Valida se o cliente preencheu o nome
-	if nome == "" {
-		return nil, errors.New("Nome não pode ser vazio")
-	}
+type UsuarioService interface {
+    CriarUsuario(nome, email, senha string) (*interface_test.UserResponse, error)
+}
 
-	// Gera uma string única universal (UUID) para servir como ID na tabela
-	id := uuid.New().String()
-	fmt.Println("ID gerado:", id)
+type Servico struct {
+    repo repository.UsuarioRepository // Acoplado apenas ao contrato da Interface
+}
 
-	// Repassa os dados validados com o ID para serem salvos definitivamente no banco
-	user, err := repository.SalvarAT_DB(id, nome, email, senha, time.Now())
-	if err != nil {
-		return nil, err
-	}	
+func NewUsuarioService(repo repository.UsuarioRepository) *Servico {
+    return &Servico{repo: repo}
+}
 
-	return user, nil
+func (s *Servico) CriarUsuario(nome, email, senha string) (*interface_test.UserResponse, error) {
+    // Regra de Negócio: Bloqueia inserções inválidas
+    if nome == "" {
+        return nil, errors.New("nome não pode ser vazio")
+    }
+
+    // Enriquecimento dos dados brutos vindos do cliente
+    novoUsuario := &interface_test.User{
+        ID:       uuid.New().String(),
+        Name:     nome,
+        Email:    email,
+        Senha:    senha,
+        CriadoEm: time.Now(),
+    }
+
+    err := s.repo.SalvarNoBanco(novoUsuario)
+    if err != nil {
+        return nil, err
+    }
+
+    // Retorna o DTO de resposta preenchido com dados públicos seguros
+    return &interface_test.UserResponse{
+        ID:        novoUsuario.ID,
+        Name:      novoUsuario.Name,
+        Email:     novoUsuario.Email,
+        Senha:     novoUsuario.Senha,
+        Criado_em: novoUsuario.CriadoEm,
+    }, nil
 }
 ```
 
----
+### 6. Controlador HTTP (`internal/handdler/handler.go`)
 
-### 4. `internal/repository/db.go` (O Gerador de Energia)
-Responsável exclusivo por estabelecer e testar a ligação direta com a base de dados PostgreSQL.
+Responsável por deserializar o payload recebido e enviar as respostas com os códigos de status HTTP apropriados.
 
 ```go
-package repository
+package handdler
 
 import (
-	"database/sql"
-	"fmt"
-
-	_ "github.com/lib/pq" // Driver necessário para o Go falar com o Postgres
+    "app/internal/interface_test"
+    "app/internal/service"
+    "encoding/json"
+    "net/http"
 )
 
-func OpenDB() (*sql.DB, error) {
-	dsn := "host=localhost port=5432 user=usuario_lucas password=123456 dbname=banco_teste_lucas sslmode=disable"
+type UsuarioHandler struct {
+    srv service.UsuarioService
+}
 
-	// Inicializa o pool de conexões técnicas
-	db, err := sql.Open("postgres", dsn)
+func NewUsuarioHandler(srv service.UsuarioService) *UsuarioHandler {
+    return &UsuarioHandler{srv: srv}
+}
 
-	// Dá um "toque" no banco para garantir que ele está respondendo de verdade
-	err = db.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("Erro ao conectar com o banco de dados: %v", err)
-	}
+func (h *UsuarioHandler) CriaUsuarioHanddler(w http.ResponseWriter, r *http.Request) {
+    var Req interface_test.UserRequest
 
-	fmt.Println("Conexão com o banco realizada com sucesso")
-	return db, nil
+    // Decodifica o corpo da requisição JSON para a struct Request DTO
+    err := json.NewDecoder(r.Body).Decode(&Req)
+    if err != nil {
+        http.Error(w, "Erro no payload: "+err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    user, err := h.srv.CriarUsuario(Req.Name, Req.Email, Req.Senha)
+    if err != nil {
+        http.Error(w, "Erro no service: "+err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated) // HTTP 201
+    json.NewEncoder(w).Encode(user)
 }
 ```
 
----
+### 7. Inicialização Globals (`main.go`)
 
-### 5. `internal/repository/user_repository.go` (A Prensa / Inserção SQL)
-Este arquivo executa o comando `INSERT` para gravar as informações nas colunas corretas da tabela.
+Montagem e orquestração do grafo de dependências, injeção dos componentes de infraestrutura e gerenciamento de middlewares do Chi (incluindo tratamento estrito do CORS).
 
 ```go
-package repository
+package main
 
 import (
-	"app/internal/estrutura"
-	"fmt"
-	"time"
+    "app/internal/handdler"
+    "app/internal/interface_test"
+    "app/internal/repository"
+    "app/internal/service"
+    "fmt"
+    "log"
+    "net/http"
+    "time"
+
+    "github.com/go-chi/chi/v5"
+    "github.com/go-chi/chi/v5/middleware"
+    "github.com/go-chi/cors"
 )
 
-func SalvarAT_DB(id, nome, email, senha string, criado time.Time) (*estrutura.UserResponse, error) {
-	// Abre a conexão com o banco de dados
-	db, err := OpenDB()
-	if err != nil {
-		return nil, err
-	}
-	defer db.Close() // Garante que a conexão será fechada ao terminar a função
+func main() {
+    // 1. Inicializa o pool do banco de dados
+    db, err := repository.OpenDBWithGORM()
+    if err != nil {
+        log.Fatalf("Falha crítica no banco: %v", err)
+    }
 
-	// Comando SQL puro para inserir os dados com segurança (\$1, \$2...) contra SQL Injection
-	query := "INSERT INTO users (id, nome, email, senha, criado) VALUES (\$1, \$2, \$3, \$4, \$5)"
-	_, ER := db.Exec(query, id, nome, email, senha, criado)
-	if ER != nil {
-		return nil, fmt.Errorf("Erro ao salvar usuário no banco de dados: %v", ER)
-	}
+    // 2. Garante a criação automática da tabela com base no modelo
+    err = db.AutoMigrate(&interface_test.User{})
+    if err != nil {
+        log.Fatalf("Erro ao rodar migrações: %v", err)
+    }
 
-	// Monta o objeto de resposta confirmando o que foi salvo
-	user := &estrutura.UserResponse{
-		ID:        id,
-		Name:      nome,
-		Email:     email,
-		Senha:     senha,
-		Criado_em: time.Now(),
-	}
+    // 3. Resolução e injeção de dependências
+    repo := repository.NewGormRepository(db)
+    srv := service.NewUsuarioService(repo)
+    handler := handdler.NewUsuarioHandler(srv)
 
-	return user, nil
+    router := chi.NewRouter()
+
+    // 4. Configuração de CORS: ESSENCIAL para permitir chamadas do Frontend assíncrono
+    router.Use(cors.Handler(cors.Options{
+        AllowedOrigins:   []string{"*"}, // Em produção, restrinja para o domínio real do front
+        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+        ExposedHeaders:   []string{"Link"},
+        AllowCredentials: true,
+        MaxAge:           300,
+    }))
+
+    // Middlewares nativos do Chi para diagnóstico e resiliência
+    router.Use(middleware.Logger)
+    router.Use(middleware.Recoverer) // Previne quedas do servidor caso ocorra um panic
+    router.Use(middleware.Timeout(60 * time.Second))
+
+    // Definição do Endpoint RESTful
+    router.Post("/usuary", handler.CriaUsuarioHanddler)
+
+    fmt.Println("Servidor iniciado em http://localhost:8080...")
+    log.Fatal(http.ListenAndServe(":8080", router))
 }
 ```
 
 ---
 
-### 6. `internal/estrutura/interface.go` (O Molde dos Dados)
-Contém os modelos (structs) que moldam a entrada de requisições e a saída de respostas.
+## 🎨 Capítulo 4: O Desenvolvimento do Frontend (TypeScript + HTML/CSS)
 
-```go
-package estrutura
+Navegue até a pasta dedicada ao frontend: `cd frontend/`.
 
-import "time"
+### 1. Inicializando e Configurando o TypeScript localmente
 
-// UserResponse representa a estrutura completa devolvida ao cliente
-type UserResponse struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Senha     string    `json:"senha"`
-	Email     string    `json:"email"`
-	Criado_em time.Time `json:"criado_em"`
-}
-
-// UserRequest define quais campos são obrigatórios receber no momento da criação
-type UserRequest struct {
-	Name  string `json:"name"`
-	Senha string `json:"senha"`
-	Email string `json:"email"`
-}	
-```
-
----
-
-## 🛠️ Dependências Utilizadas
-
-Para que este módulo funcione corretamente, foram baixadas e instaladas as seguintes dependências externas via terminal:
+Para mitigar problemas de permissões administrativas (EACCES), as ferramentas devem ser instaladas localmente no escopo de desenvolvimento do pacote:
 
 ```bash
-# Roteador HTTP leve e veloz
-go get github.com/go-chi/chi/v5
-
-# Driver oficial do PostgreSQL para o Go
-go get github.com/lib/pq
-
-# Biblioteca para geração de IDs únicos universais
-go get github.com/google/uuid
+npm init -y
+npm install --save-dev typescript
+npx tsc --init
 ```
 
----
+### 2. Interface de Usuário (`frontend/index.html`)
 
-## 🚀 Como Testar a Inserção (via cURL)
+Mapeamento dos componentes visuais e ancoragem estrutural com o script JavaScript transpilado final.
 
-# 🗄️ Estrutura do Banco de Dados para o Método POST
-
-Para que o seu método **POST** consiga inserir os dados usando o código atual (com o comando `INSERT` nativo), o formato da tabela precisa bater exatamente com as colunas que você definiu na sua query SQL.
-
-Aqui está o comando **`CREATE TABLE`** pronto para você executar no seu PostgreSQL.
-
----
-
-### 💻 Comando SQL para Criar a Tabela
-
-Abra o terminal do seu banco de dados (`banco_teste_lucas`) e execute o seguinte comando:
-
-```sql
-CREATE TABLE public.users (
-    id character varying(36) NOT NULL,
-    nome character varying(50) NOT NULL,
-    email character varying(100) NOT NULL,
-    senha character varying(100) NOT NULL,
-    criado timestamp with time zone DEFAULT now(),
-    CONSTRAINT users_pkey PRIMARY KEY (id)
-);
-
-OU
-
-CREATE TABLE users (
-    id varchar(36) NOT NULL,
-    nome varchar(50) NOT NULL,
-    email varchar(100) NOT NULL,
-    senha varchar(100) NOT NULL,
-    criado timestamp with time zone DEFAULT now(),
-    CONSTRAINT users_pkey PRIMARY KEY (id)
-);
-
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Usuário</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Criar Nova Conta</h2>
+        <form id="cadastroForm">
+            <div class="form-group">
+                <label for="nome">Nome:</label>
+                <input type="text" id="nome" required placeholder="Digite seu nome">
+            </div>
+            <div class="form-group">
+                <label for="email">E-mail:</label>
+                <input type="email" id="email" required placeholder="Digite seu e-mail">
+            </div>
+            <div class="form-group">
+                <label for="senha">Senha:</label>
+                <input type="password" id="senha" required placeholder="Digite sua senha">
+            </div>
+            <button type="submit">Cadastrar</button>
+        </form>
+        <div id="mensagem" class="hidden"></div>
+    </div>
+    <!-- Importação imperativa do script compilado em JS -->
+    <script src="app.js"></script>
+</body>
+</html>
 ```
 
-> **Nota:** Use o código com cuidado ao executar em ambientes de produção.
+### 3. Folha de Estilos (`frontend/style.css`)
 
----
-
-### 🔍 Por que a tabela precisa ser exatamente assim?
-
-Ao olhar o arquivo `banco.go` que você enviou, a sua linha de inserção é:  
-`INSERT INTO users (id, nome, email, senha, criado) VALUES ($1, $2, $3, $4, $5)`
-
-* **`id character varying(36)`**: O tamanho 36 é o tamanho exato de um **UUID** em formato de texto (que você está gerando no arquivo `service.go`). Ele foi definido como a chave primária (`PRIMARY KEY`).
-* **`nome`, `email` e `senha`**: São mapeados como textos variáveis (`character varying`) com tamanhos seguros para guardar dados de cadastro.
-* **`criado timestamp with time zone`**: Armazena a data e a hora exatas em que o usuário foi registrado. O `DEFAULT now()` garante que, se o Go esquecer de enviar a data por algum motivo, o próprio banco salva o horário atual automaticamente.
-
----
-
-### 💡 Uma dica importante sobre as colunas
-
-Note que na primeira etapa que fizemos juntos (o método GET), a sua tabela original possuía também a coluna `medicamento` e `data_nascimento`.
-
-Como o seu código do **POST** atual envia apenas 5 campos (`id, nome, email, senha, criado`), criamos a tabela acima apenas com esses 5. Se você mantivesse os campos de medicamento e data de nascimento na tabela e eles fossem obrigatórios (`NOT NULL`), o seu POST daria erro por não enviá-los.
-
----
-
-## 🚀 Próximos Passos
-
-Crie a tabela no seu banco de dados e faça um teste rodando o seu **POST via cURL** ou Insomnia! 
-
-<FollowUp>
-Se o registro for inserido com sucesso, me avise se quer que eu te ajude a **adicionar os campos de medicamento e data de nascimento no POST** para que as duas partes fiquem idênticas!
-</FollowUp>
-
-
-Com o servidor rodando localmente, você pode disparar um comando no terminal utilizando a ferramenta **cURL** para simular um cliente inserindo dados na API:
-
-```bash
-curl -X POST http://localhost:8080/usuary \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nome": "Lucas Silva",
-    "email": "lucas@email.com",
-    "senha": "password123"
-  }'
+```css
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #f4f6f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+.container {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+}
+h2 { text-align: center; color: #333; margin-top: 0; }
+.form-group { margin-bottom: 20px; }
+label { display: block; margin-bottom: 6px; color: #666; font-weight: 600; }
+input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+input:focus { border-color: #007bff; outline: none; }
+button { width: 100%; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+button:hover { background-color: #0056b3; }
+#mensagem { margin-top: 15px; padding: 10px; border-radius: 4px; text-align: center; }
+.success { background-color: #d4edda; color: #155724; }
+.error { background-color: #f8d7da; color: #721c24; }
+.hidden { display: none; }
 ```
 
-**Resposta esperada (JSON):**
-```json
-{
-  "id": "e3b8a1c9-7d4f-4e3a-bc2d-89ef12345678",
-  "name": "Lucas Silva",
-  "senha": "password123",
-  "email": "lucas@email.com",
-  "criado_em": "2026-07-03T19:38:00Z"
+### 4. Captura e Disparo Assíncrono (`frontend/app.ts`)
+
+Implementação estrita de tipos para encapsulamento e envio do payload JSON à API RESTful.
+
+```typescript
+interface UserRequest {
+    name: string;
+    email: string;
+    senha: string;
+}
+
+const form = document.getElementById('cadastroForm') as HTMLFormElement;
+const msgDiv = document.getElementById('mensagem') as HTMLDivElement;
+
+form.addEventListener('submit', async (event: Event) => {
+    event.preventDefault(); // Bloqueia a recarga padrão da página
+
+    const nomeInput = document.getElementById('nome') as HTMLInputElement;
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const senhaInput = document.getElementById('senha') as HTMLInputElement;
+
+    const dadosUsuario: UserRequest = {
+        name: nomeInput.value,
+        email: emailInput.value,
+        senha: senhaInput.value
+    };
+
+    try {
+        // Envio do payload assíncrono para o Backend em Go
+        const response = await fetch('http://localhost:8080/usuary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dadosUsuario)
+        });
+
+        if (response.ok) {
+            const usuarioCriado = await response.json();
+            exibirMensagem(`✅ Usuário criado com sucesso! ID: ${usuarioCriado.id}`, 'success');
+            form.reset();
+        } else {
+            const erroTexto = await response.text();
+            exibirMensagem(`❌ Erro: ${erroTexto}`, 'error');
+        }
+    } catch (error) {
+        exibirMensagem('❌ Erro crítico: Falha ao estabelecer conexão com o backend.', 'error');
+    }
+});
+
+function exibirMensagem(texto: string, tipo: 'success' | 'error') {
+    msgDiv.innerText = texto;
+    msgDiv.className = tipo;
 }
 ```
+
+---
+
+## 🚀 Capítulo 5: Ciclo de Execução e Homologação do Fluxo
+
+Para validar todo o ecossistema integrado:
+
+### Compilação do Frontend (TypeScript para JavaScript)
+
+Dentro do diretório `frontend/`, execute o compilador configurado na pasta:
+
+```bash
+npx tsc
+```
+
+(Este comando lerá o arquivo `tsconfig.json`, detectará o arquivo `app.ts` e gerará o arquivo de produção funcional `app.js` sem interferências).
+
+### Inicialização do Servidor Backend
+
+Retorne à raiz do projeto (`cd ..`) e execute a aplicação Go:
+
+```bash
+go run main.go
+```
+
+### Execução do Teste de Integração
+
+Abra o arquivo `index.html` no navegador de sua preferência. Preencha os campos do formulário e acione o botão "Cadastrar". A interface responderá dinamicamente exibindo o ID único gerado pelo backend através do banco de dados relacional.
+
+___
+
+![alt text](image.png)
+
+___
+
+![alt text](image-1.png)

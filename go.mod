@@ -4,8 +4,10 @@ go 1.23
 
 require (
 	github.com/go-chi/chi/v5 v5.3.0
+	github.com/go-chi/cors v1.2.2
 	github.com/google/uuid v1.6.0
-	github.com/lib/pq v1.12.3
+	gorm.io/driver/postgres v1.6.0
+	gorm.io/gorm v1.31.2
 )
 
 require (
@@ -18,6 +20,4 @@ require (
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	gorm.io/driver/postgres v1.6.0 // indirect
-	gorm.io/gorm v1.31.2 // indirect
 )

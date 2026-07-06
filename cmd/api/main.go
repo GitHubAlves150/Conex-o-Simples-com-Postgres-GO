@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors" // <--- 1. ADICIONADO O IMPORT DO CORS AQUI!
 )
 
 func main() {
@@ -30,6 +31,16 @@ func main() {
 	handler := handdler.NewUsuarioHandler(srv)
 
 	router := chi.NewRouter()
+	// 1. IMPORTANTE: Adicione as configurações de CORS antes de definir a rota!
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"}, // Permite requisições de qualquer origem (ideal para teste local)
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300, // Cache de pre-flight em segundos
+	}))
+
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.Timeout(60 * time.Second))
